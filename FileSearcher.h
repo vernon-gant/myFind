@@ -6,6 +6,9 @@
 #include <memory>
 #include <utility>
 
+// Core component of a program. Stores all needed dependencies to perform a search.
+// When a new directory is found launches a new thread in case of recursive search and does nothing
+// when normal search. Update path is used to change path in new process
 class FileSearcher : public Searcher, public std::enable_shared_from_this<Searcher> {
 private:
     std::shared_ptr<MessageQueue> _mq;

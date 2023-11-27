@@ -1,13 +1,16 @@
 #pragma once
 
-#include <filesystem>
 #include <regex>
 #include <string>
+#include <utility>
 #include <vector>
 
-namespace fs = std::filesystem;
+typedef struct parsed_args {
+    std::string path;
+    std::vector<std::string> file_names, options;
+} parsed_args_t;
 
-//
+// Config object derived from arguments
 typedef struct search_config {
     std::string path;
     std::vector<std::string> file_names;
@@ -17,85 +20,59 @@ typedef struct search_config {
 class ArgumentsParser {
 private:
     std::vector<std::string> _args;
-    std::string _path, _error_message;
-    std::vector<std::string> _file_names;
-    bool _is_recursive = false, _is_case_sensitive = true;
+    std::string _path;
+    std::vector<std::string> _file_names, _options;
 
-    static std::vector<std::string> args_to_strings(int argc, char *argv[]) {
-        std::vector<std::string> args;
-        args.reserve(argc);
-        for (int i = 0; i < argc; i++) {
-            args.emplace_back(argv[i]);
-        }
-        args.erase(args.begin());
-        return args;
-    }
-
-    static bool is_valid_file_path(const std::string &path) { return fs::exists(path); }
-
-    static bool is_valid_filename(const std::string &name) {
-        std::regex pattern(R"(^[a-zA-Z0-9_.-]+$)");
-        return std::regex_match(name, pattern);
-    }
-
-    bool validate_path() {
-        if (_args.empty()) {
-            _error_message = "No search path provided.";
-            return false;
-        }
-        _path = _args[0];
-        if (!is_valid_file_path(_args[0])) {
-            _error_message = "Invalid search path: " + _path;
-            return false;
-        }
-        _args.erase(_args.begin());
-        return true;
-    }
-
-    bool process_filenames() {
-        if (_args.empty()) {
-            _error_message = "No filenames provided.";
-            return false;
-        }
-        for (const std::string &filename: _args) {
-            if (!is_valid_filename(filename)) {
-                _error_message = "Invalid filename format: " + filename;
-                return false;
-            }
-            _file_names.push_back(filename);
-        }
-        return !_file_names.empty();
-    }
-
-    void handle_flags() {
+    void parse_options() {
         _args.erase(std::remove_if(_args.begin(), _args.end(),
                                    [this](const std::string &arg) {
-                                       if (arg == "-R") {
-                                           _is_recursive = true;
+                                       if (arg[0] == '-') {
+                                           _options.emplace_back(arg);
                                            return true;
-                                       } else if (arg == "-i") {
-                                           _is_case_sensitive = false;
-                                           return true;
-                                       } else if (arg[0] == '-') return true;
+                                       }
                                        return false;
                                    }),
                     _args.end());
     }
 
+    void parse_path() {
+        if (_args.empty()) return;
+
+        _path = _args.front();
+        _args.erase(_args.begin());
+    }
+
+    void parse_filenames() {
+        if (_args.empty()) return;
+
+        _file_names.assign(_args.begin(), _args.end());
+    }
+
+
 public:
-    ArgumentsParser(int argc, char *argv[]) {
-        _args = args_to_strings(argc, argv);
+    static const std::map<std::string, std::function<void(search_config_t &)>> VALID_OPTIONS;
+
+    explicit ArgumentsParser(std::vector<std::string> args) {
+        _args = std::move(args);
     }
 
-    bool valid_arguments() {
-        handle_flags();
-        return validate_path() && process_filenames();
+    // Main method to call, returns whether given argument list is okay or not and fills out the data in the object
+    // If returns true then you may call get_search_config which will deliver config
+    parsed_args_t parse() {
+        parse_options();
+        parse_path();
+        parse_filenames();
+        return {_path, _file_names, _options};
     }
-
-    const std::string &get_error() { return _error_message; }
 
     search_config_t get_search_config() {
-        if (!_error_message.empty() || _path.empty()) throw std::runtime_error("Invalid operation!");
-        return {_path, _file_names, _is_recursive, _is_case_sensitive};
+        search_config config = {.path =  _path, .file_names = _file_names};
+        for (std::string &option: _options) VALID_OPTIONS.at(option)(config);
+        return config;
     }
+};
+
+const std::map<std::string, std::function<void(search_config_t &)>> ArgumentsParser::VALID_OPTIONS{
+        {"-R", [](search_config_t &config) { config.is_recursive = true; }},
+        {"-i", [](search_config_t &config) { config.is_case_sensitive = false; }}
 };

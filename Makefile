@@ -3,7 +3,7 @@ CXX = g++
 CXXFLAGS = -Wall -g -Iinclude
 
 # Build target executable
-TARGET = bin/myfind
+TARGET = myfind
 
 # Source and object files
 SRCS = $(wildcard *.cpp)

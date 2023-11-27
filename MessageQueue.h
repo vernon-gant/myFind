@@ -11,6 +11,9 @@ struct message_buffer {
     char message_text[256];
 };
 
+// Simple wrapper for message queue functionality so that we can send messages
+// and then use receive method from the main thread to wait for incoming messages
+// from other processes
 class MessageQueue {
 private:
     int mq_id;
@@ -27,14 +30,14 @@ public:
     }
 
     void send_message(const std::string &message) const {
-        message_buffer buffer;
+        message_buffer buffer{};
         buffer.message_type = MESSAGE_TYPE;
         strncpy(buffer.message_text, message.c_str(), MAX_MESSAGE_SIZE);
         msgsnd(mq_id, &buffer, sizeof(buffer.message_text), 0);
     }
 
     void receive_messages(std::vector<std::string> &messages) {
-        message_buffer buffer;
+        message_buffer buffer{};
 
         while (true) {
             msgrcv(mq_id, &buffer, sizeof(buffer.message_text), MESSAGE_TYPE, 0);
@@ -43,6 +46,6 @@ public:
             messages.emplace_back(std::move(message));
         }
 
-        msgctl(mq_id, IPC_RMID, NULL);
+        msgctl(mq_id, IPC_RMID, nullptr);
     }
 };

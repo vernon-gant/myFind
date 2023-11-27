@@ -7,6 +7,8 @@
 #include "Searcher.h"
 #include <unordered_set>
 
+// Here we store children processes in a vector which we add when we find new directories in
+// current directory. Then we use wait function to wait for them all to avoid zombie processes
 class ProcessHandler {
 
 private:

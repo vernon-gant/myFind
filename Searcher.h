@@ -2,6 +2,7 @@
 
 #include <string>
 
+// Just an interface to avoid circular dependency
 class Searcher {
 public:
     virtual void search() = 0;
