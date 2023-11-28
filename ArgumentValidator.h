@@ -29,7 +29,7 @@ private:
 
     bool valid_path() {
         if (_parsed_args.path.empty()) _error_message = "No search path provided!\nTry again...";
-        if (!fs::exists(_parsed_args.path))
+        else if (!fs::exists(_parsed_args.path))
             _error_message = "Invalid search path : " + _parsed_args.path + "\nTry again...";
 
         return _error_message.empty();
@@ -51,7 +51,7 @@ public:
 
     explicit ArgumentValidator(parsed_args_t parsed_args) { _parsed_args = std::move(parsed_args); }
 
-    bool validate() { return valid_options() && valid_path() && valid_filenames(); }
+    bool validate() { return valid_path() && valid_filenames() && valid_options(); }
 
     const std::string &get_error() { return _error_message; }
 };
